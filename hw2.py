@@ -2,12 +2,15 @@ import string
 import requests
 from collections import defaultdict
 import matplotlib.pyplot as plt
+from concurrent.futures import ThreadPoolExecutor
 
 
 def get_text(url):
     try:
-        return requests.get(url).text
-    except requests.RequestException:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.text
+    except requests.RequestException as e:
         return None
 
 
@@ -33,9 +36,15 @@ def reduce_function(key_values):
 def map_reduce(text):
     text = remove_punctuation(text)
     words = text.split()
-    mapped_values = map(map_function, words)
+
+    with ThreadPoolExecutor() as executor:
+        mapped_values = list(executor.map(map_function, words))
+
     shuffled_values = shuffle_function(mapped_values)
-    reduced_values = map(reduce_function, shuffled_values)
+
+    with ThreadPoolExecutor() as executor:
+        reduced_values = list(executor.map(reduce_function, shuffled_values))
+
     return dict(reduced_values)
 
 
